@@ -1,11 +1,14 @@
 import React from "react";
 import DeckGL from "@deck.gl/react";
 import { IconLayer } from "@deck.gl/layers";
-// import { TripsLayer } from "@deck.gl/geo-layers";
+import { TripsLayer } from "@deck.gl/geo-layers";
 import { StaticMap } from "react-map-gl";
+import {AmbientLight, PointLight, LightingEffect} from '@deck.gl/core';
+import {PhongMaterial} from '@luma.gl/core';
 import LayerInfo from './LayerInfo';
 // Source data CSV
-import sbux_stores from "./sbux-store-locations.json";
+import sbux_stores from "./data/sbux-store-locations.json";
+import trips from "./data/trips-data.json";
 import logo from "./images/star.png";
 
 console.log(sbux_stores);
@@ -25,6 +28,37 @@ const INITIAL_VIEW_STATE = {
 const ICON_MAPPING = {
   marker: { x: 0, y: 0, width: 36, height: 36, mask: true }
 };
+// https://deck.gl/index.html#/documentation/deckgl-api-reference/lights/ambient-light
+const ambientLight = new AmbientLight({
+  color: [255, 255, 255],
+  intensity: 1.0
+});
+
+// https://deck.gl/index.html#/documentation/deckgl-api-reference/lights/point-light
+const pointLight = new PointLight({
+  color: [255, 255, 255],
+  intensity: 2.0,
+  position: [-74.05, 40.7, 8000]
+});
+
+// https://deck.gl/index.html#/documentation/deckgl-api-reference/effects/lighting-effect
+const lightingEffect = new LightingEffect({ambientLight, pointLight});
+
+// https://luma.gl/docs/api-reference/core/materials/phong-material
+const material = new PhongMaterial({
+  ambient: 0.1,
+  diffuse: 0.6,
+  shininess: 32,
+  specularColor: [60, 64, 70]
+});
+
+const DEFAULT_THEME = {
+  buildingColor: [74, 80, 87],
+  trailColor0: [253, 128, 93],
+  trailColor1: [23, 184, 190],
+  material,
+  effects: [lightingEffect]
+};
 
 // DeckGL react component
 class App extends React.Component {
@@ -33,19 +67,43 @@ class App extends React.Component {
     this.state = { 
       time: 0,
       hoveredItem: {},
+      timelinePoints: [],
+      timelineTimestamps: [],
+      status: "LOADING",
     };
   }
 
-  // componentDidMount() {
-  //   this._animate();
-  // }
+  componentDidMount() {
+    this._processTrips();
+    this._animate();
+  }
 
-  // componentWillUnmount() {
-  //   if (this._animationFrame) {
-  //     window.cancelAnimationFrame(this._animationFrame);
-  //   }
-  // }
+  componentWillUnmount() {
+    if (this._animationFrame) {
+      window.cancelAnimationFrame(this._animationFrame);
+    }
+  }
 
+  _processTrips = () => {
+    if (trips) {
+      this.setState({ status: "LOADED" });
+      const timelinePoints = trips.locations.reduce((accu, curr) => {
+        // divide by 10000000 to convert E7 lat/long into normal lat/long
+        accu.push([curr.longitudeE7 / 10000000, curr.latitudeE7 / 10000000]);
+        return accu;
+      }, []);
+      const timelineTimestamps = trips.locations.reduce((accu, curr) => {
+        accu.push(curr.timestampMs);
+        return accu;
+      }, []);
+      this.setState({
+        timelinePoints,
+        timelineTimestamps,
+        status: "READY"
+      });
+    }
+  };
+  
   _animate() {
     const {
       loopLength = 1800, // unit corresponds to the timestamp in source data
@@ -57,7 +115,7 @@ class App extends React.Component {
     this.setState({
       time: ((timestamp % loopTime) / loopTime) * loopLength // 1 ~ 1800
     });
-    console.log(this.state.time);
+    // console.log(this.state.time);
     // requestAnimationFrame: ブラウザの描画タイミング毎に実行
     this._animationFrame = window.requestAnimationFrame(
       this._animate.bind(this)
@@ -67,9 +125,12 @@ class App extends React.Component {
   _renderLayers() {
     const {
       stores = sbux_stores,
-      // trips = DATA_SOURCE.TRIPS
-      // trailLength = 180,
-      // theme = DEFAULT_THEME
+      trips = [{
+        path: this.state.timelinePoints,
+        timestamps: this.state.timelineTimestamps,
+      }],
+      trailLength = 180,
+      theme = DEFAULT_THEME,
       image = logo
     } = this.props;
 
@@ -95,7 +156,20 @@ class App extends React.Component {
         //      http://deck.gl/#/documentation/developer-guide/adding-interactivity?section=example-display-a-tooltip-for-hovered-object
         //   */
         // }
-      })
+      }),
+      new TripsLayer({
+        id: 'trips',
+        data: trips,
+        getPath: d => d.path,
+        getTimestamps: d => d.timestamps,
+        getColor: d => [48, 102, 61],
+        opacity: 0.3,
+        widthMinPixels: 2,
+        rounded: true,
+        trailLength,
+        // currentTime: this.state.time,
+        shadowEnabled: false
+      }),
     ];
   }
 
@@ -109,12 +183,29 @@ class App extends React.Component {
     // );
   // }
   render() {
-    const { hoveredItem } = this.state;
+    const { 
+      hoveredItem,
+      viewState,
+      // https://docs.mapbox.com/api/maps/#styles
+      mapStyle = 'mapbox://styles/mapbox/light-v10',
+      theme = DEFAULT_THEME 
+    } = this.state;
+
     return (
-      <DeckGL viewState={INITIAL_VIEW_STATE} controller={true} layers={this._renderLayers()}>
+      <DeckGL
+        layers={this._renderLayers()}
+        // effects={theme.effects}
+        initialViewState={INITIAL_VIEW_STATE}
+        // viewState={viewState}
+        controller={true}
+      >
         <LayerInfo hovered={hoveredItem} />
-        {/* https://docs.mapbox.com/api/maps/#styles */}
-        <StaticMap mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN} mapStyle="mapbox://styles/mapbox/light-v10" />
+        <StaticMap
+          reuseMaps
+          mapStyle={mapStyle}
+          preventStyleDiffing={true}
+          mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
+          />
       </DeckGL>
     );
   }

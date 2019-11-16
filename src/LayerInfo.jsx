@@ -4,7 +4,7 @@ import React from "react";
 class LayerInfo extends React.Component {
   render(){
     const { hovered } = this.props;
-    console.log("hovered", hovered);
+    // console.log("hovered", hovered);
     
     return (
       <div>popup!!!</div>
