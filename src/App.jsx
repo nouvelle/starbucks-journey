@@ -1,10 +1,9 @@
-// only line without map component using React
 import React from "react";
 import DeckGL from "@deck.gl/react";
-import { LineLayer } from "@deck.gl/layers";
 import { IconLayer } from "@deck.gl/layers";
-import { TripsLayer } from "@deck.gl/geo-layers";
+// import { TripsLayer } from "@deck.gl/geo-layers";
 import { StaticMap } from "react-map-gl";
+import LayerInfo from './LayerInfo';
 // Source data CSV
 import sbux_stores from "./sbux-store-locations.json";
 import logo from "./images/star.png";
@@ -26,19 +25,15 @@ const INITIAL_VIEW_STATE = {
 const ICON_MAPPING = {
   marker: { x: 0, y: 0, width: 36, height: 36, mask: true }
 };
-// Data to be used by the LineLayer
-const data = [
-  {
-    sourcePosition: [-122.33207, 47.65],
-    targetPosition: [-122.33207, 47.6]
-  }
-];
 
 // DeckGL react component
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { time: 0 };
+    this.state = { 
+      time: 0,
+      hoveredItem: {},
+    };
   }
 
   // componentDidMount() {
@@ -73,13 +68,12 @@ class App extends React.Component {
     const {
       stores = sbux_stores,
       // trips = DATA_SOURCE.TRIPS
-      trailLength = 180,
+      // trailLength = 180,
       // theme = DEFAULT_THEME
       image = logo
     } = this.props;
 
     return [
-      new LineLayer({ id: "line-layer", data }),
       new IconLayer({
         id: "stores",
         data: stores,
@@ -93,9 +87,7 @@ class App extends React.Component {
         // sizeScale: 10,
         getColor: d => [48, 102, 61],
         onHover: info => this.setState({
-          hoveredObject: info.object,
-          pointerX: info.x,
-          pointerY: info.y
+          hoveredItem: info
         })
         // {
         //   const tooltip = `${d.Brand}\n${d.StoreName}\n${d.StreetAddress}`;
@@ -107,36 +99,22 @@ class App extends React.Component {
     ];
   }
 
-  _renderTooltip() {
-    const {hoveredObject, pointerX, pointerY} = this.state || {};
-    return hoveredObject && (
-      <div style={{position: 'absolute', zIndex: 1, pointerEvents: 'none', left: pointerX + 10, top: pointerY + 10}}>
-        { hoveredObject.StoreName }
-      </div>
-    );
-  }
-
+  // _renderTooltip() {
+  //   console.log(this.state);
+  //   const {hoveredObject, pointerX, pointerY} = this.state || {};
+    // return hoveredObject && (
+    //   <div style={{position: 'absolute', zIndex: 1, pointerEvents: 'none', left: pointerX + 10, top: pointerY + 10}}>
+    //     { hoveredObject.StoreName }
+    //   </div>
+    // );
+  // }
   render() {
-    // const views = [
-    //   new MapView({ id: "map", width: "50%", controller: true }),
-    //   new FirstPersonView({ width: "50%", x: "50%", fovy: 50 })
-    // ];
+    const { hoveredItem } = this.state;
     return (
-      // <DeckGL
-      //   initialViewState={INITIAL_VIEW_STATE}
-      //   layers={layers}
-      //   views={views}
-      // >
-      //   <View id="map">
-      //     <StaticMap mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN} />
-      //   </View>
-      // </DeckGL>
       <DeckGL viewState={INITIAL_VIEW_STATE} controller={true} layers={this._renderLayers()}>
-        { this._renderTooltip() }
-        {/* <MapView id="map" width="50%" controller={true}> */}
+        <LayerInfo hovered={hoveredItem} />
         {/* https://docs.mapbox.com/api/maps/#styles */}
         <StaticMap mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN} mapStyle="mapbox://styles/mapbox/light-v10" />
-        {/* </MapView> */}
       </DeckGL>
     );
   }
