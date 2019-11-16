@@ -1,17 +1,14 @@
 import React from "react";
 import DeckGL from "@deck.gl/react";
-import { IconLayer } from "@deck.gl/layers";
+import { IconLayer, PathLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
-import { StaticMap } from "react-map-gl";
-import {AmbientLight, PointLight, LightingEffect} from '@deck.gl/core';
-import {PhongMaterial} from '@luma.gl/core';
-import LayerInfo from './LayerInfo';
+import MapGL from "react-map-gl";
+import LayerInfo from "./LayerInfo";
+import DeckGLOverlay from "@deck.gl/react";
 // Source data CSV
 import sbux_stores from "./data/sbux-store-locations.json";
 import trips from "./data/trips-data.json";
 import logo from "./images/star.png";
-
-console.log(sbux_stores);
 
 // Set your mapbox access token here
 const MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
@@ -28,57 +25,45 @@ const INITIAL_VIEW_STATE = {
 const ICON_MAPPING = {
   marker: { x: 0, y: 0, width: 36, height: 36, mask: true }
 };
-// https://deck.gl/index.html#/documentation/deckgl-api-reference/lights/ambient-light
-const ambientLight = new AmbientLight({
-  color: [255, 255, 255],
-  intensity: 1.0
-});
-
-// https://deck.gl/index.html#/documentation/deckgl-api-reference/lights/point-light
-const pointLight = new PointLight({
-  color: [255, 255, 255],
-  intensity: 2.0,
-  position: [-74.05, 40.7, 8000]
-});
-
-// https://deck.gl/index.html#/documentation/deckgl-api-reference/effects/lighting-effect
-const lightingEffect = new LightingEffect({ambientLight, pointLight});
-
-// https://luma.gl/docs/api-reference/core/materials/phong-material
-const material = new PhongMaterial({
-  ambient: 0.1,
-  diffuse: 0.6,
-  shininess: 32,
-  specularColor: [60, 64, 70]
-});
 
 const DEFAULT_THEME = {
   buildingColor: [74, 80, 87],
   trailColor0: [253, 128, 93],
-  trailColor1: [23, 184, 190],
-  material,
-  effects: [lightingEffect]
+  trailColor1: [23, 184, 190]
 };
 
 // DeckGL react component
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { 
+    this.state = {
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        latitude: 47.60521,
+        longitude: -122.33207,
+        zoom: 11,
+        pitch: 30,
+        maxZoom: 17
+      },
       time: 0,
       hoveredItem: {},
       timelinePoints: [],
       timelineTimestamps: [],
       status: "LOADING",
+      selectedPoint: {}
     };
   }
 
   componentDidMount() {
     this._processTrips();
+    window.addEventListener("resize", this._resize);
+    this._resize();
     this._animate();
   }
 
   componentWillUnmount() {
+    window.removeEventListener("resize", this._resize);
     if (this._animationFrame) {
       window.cancelAnimationFrame(this._animationFrame);
     }
@@ -103,7 +88,7 @@ class App extends React.Component {
       });
     }
   };
-  
+
   _animate() {
     const {
       loopLength = 1800, // unit corresponds to the timestamp in source data
@@ -122,13 +107,34 @@ class App extends React.Component {
     );
   }
 
+  _resize = () => {
+    this._onViewportChange({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+  };
+
+  _onViewportChange = viewport => {
+    this.setState({
+      viewport: { ...this.state.viewport, ...viewport }
+    });
+  };
+
+  _onPointClick = ({ longitude, latitude, name }) => {
+    this.setState({
+      selectedPoint: { longitude, latitude, name }
+    });
+  };
+
   _renderLayers() {
     const {
       stores = sbux_stores,
-      trips = [{
-        path: this.state.timelinePoints,
-        timestamps: this.state.timelineTimestamps,
-      }],
+      trips = [
+        {
+          path: this.state.timelinePoints,
+          timestamps: this.state.timelineTimestamps
+        }
+      ],
       trailLength = 180,
       theme = DEFAULT_THEME,
       image = logo
@@ -147,9 +153,10 @@ class App extends React.Component {
         getSize: d => 2,
         // sizeScale: 10,
         getColor: d => [48, 102, 61],
-        onHover: info => this.setState({
-          hoveredItem: info
-        })
+        onHover: info =>
+          this.setState({
+            hoveredItem: info
+          })
         // {
         //   const tooltip = `${d.Brand}\n${d.StoreName}\n${d.StreetAddress}`;
         //   /* Update tooltip
@@ -157,56 +164,73 @@ class App extends React.Component {
         //   */
         // }
       }),
-      new TripsLayer({
-        id: 'trips',
+      // new TripsLayer({
+      //   id: "trips",
+      //   data: trips,
+      //   getPath: d => d.path,
+      //   getTimestamps: d => d.timestamps,
+      //   getColor: d => [48, 102, 61],
+      //   opacity: 0.3,
+      //   widthMinPixels: 2,
+      //   rounded: true,
+      //   trailLength,
+      //   // currentTime: this.state.time,
+      //   shadowEnabled: false
+      // }),
+      new PathLayer({
+        id: "timeline-layer",
         data: trips,
-        getPath: d => d.path,
-        getTimestamps: d => d.timestamps,
-        getColor: d => [48, 102, 61],
-        opacity: 0.3,
+        opacity: 0.5,
+        pickable: false,
+        widthScale: 2,
         widthMinPixels: 2,
-        rounded: true,
-        trailLength,
-        // currentTime: this.state.time,
-        shadowEnabled: false
-      }),
+        getPath: d => d.path,
+        getColor: [61, 90, 254]
+      })
     ];
   }
 
-  // _renderTooltip() {
-  //   console.log(this.state);
-  //   const {hoveredObject, pointerX, pointerY} = this.state || {};
-    // return hoveredObject && (
-    //   <div style={{position: 'absolute', zIndex: 1, pointerEvents: 'none', left: pointerX + 10, top: pointerY + 10}}>
-    //     { hoveredObject.StoreName }
-    //   </div>
-    // );
-  // }
   render() {
-    const { 
+    const {
       hoveredItem,
       viewState,
       // https://docs.mapbox.com/api/maps/#styles
-      mapStyle = 'mapbox://styles/mapbox/light-v10',
-      theme = DEFAULT_THEME 
+      mapStyle = "mapbox://styles/mapbox/light-v10",
+      theme = DEFAULT_THEME
     } = this.state;
+    const timelineData = [
+      {
+        path: this.state.timelinePoints,
+        timestamps: this.state.timelineTimestamps,
+        name: "timeline",
+        color: [48, 102, 61]
+      }
+    ];
 
     return (
-      <DeckGL
-        layers={this._renderLayers()}
-        // effects={theme.effects}
-        initialViewState={INITIAL_VIEW_STATE}
-        // viewState={viewState}
-        controller={true}
+      <MapGL
+        {...this.state.viewport}
+        onViewportChange={viewport => this._onViewportChange(viewport)}
+        mapStyle={mapStyle}
+        mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
       >
-        <LayerInfo hovered={hoveredItem} />
-        <StaticMap
-          reuseMaps
-          mapStyle={mapStyle}
-          preventStyleDiffing={true}
-          mapboxApiAccessToken={MAPBOX_ACCESS_TOKEN}
-          />
-      </DeckGL>
+        <DeckGLOverlay
+          viewport={this.state.viewport}
+          timelineData={timelineData}
+          // pointData={pointData}
+          // settings={this.state.settings}
+          onPointClick={this._onPointClick}
+        />
+        <DeckGL
+          layers={this._renderLayers()}
+          // effects={theme.effects}
+          initialViewState={INITIAL_VIEW_STATE}
+          // viewState={viewState}
+          controller={true}
+        >
+          {/* <LayerInfo hovered={hoveredItem} /> */}
+        </DeckGL>
+      </MapGL>
     );
   }
 }
