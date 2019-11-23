@@ -18,18 +18,12 @@ const INITIAL_VIEW_STATE = {
   latitude: 47.60521,
   longitude: -122.33207,
   zoom: 11.9,
-  pitch: 20,
+  pitch: 0,
   bearing: 0
 };
 
 const ICON_MAPPING = {
   marker: { x: 0, y: 0, width: 36, height: 36, mask: true }
-};
-
-const DEFAULT_THEME = {
-  buildingColor: [74, 80, 87],
-  trailColor0: [253, 128, 93],
-  trailColor1: [23, 184, 190]
 };
 
 // DeckGL react component
@@ -43,7 +37,7 @@ class App extends React.Component {
         latitude: 47.60521,
         longitude: -122.33207,
         zoom: 11,
-        pitch: 30,
+        pitch: 0,
         maxZoom: 17
       },
       time: 0,
@@ -78,7 +72,15 @@ class App extends React.Component {
         return accu;
       }, []);
       const timelineTimestamps = trips.locations.reduce((accu, curr) => {
-        accu.push(curr.timestampMs);
+        const startTime = new Date("2019/2/16");
+        const startTimestamp = startTime.getTime();
+        const elapsed = Number(curr.timestampMs) - startTimestamp;
+        // ミリ秒を分に変換(端数切捨て)
+        var min = Math.floor(elapsed / (1000 * 60));
+        // console.log("elapsed", elapsed);
+        // console.log("min", min);
+
+        accu.push(min);
         return accu;
       }, []);
       this.setState({
@@ -135,8 +137,7 @@ class App extends React.Component {
           timestamps: this.state.timelineTimestamps
         }
       ],
-      trailLength = 180,
-      theme = DEFAULT_THEME,
+      trailLength = 600,
       image = logo
     } = this.props;
 
@@ -164,39 +165,37 @@ class App extends React.Component {
         //   */
         // }
       }),
-      // new TripsLayer({
-      //   id: "trips",
-      //   data: trips,
-      //   getPath: d => d.path,
-      //   getTimestamps: d => d.timestamps,
-      //   getColor: d => [48, 102, 61],
-      //   opacity: 0.3,
-      //   widthMinPixels: 2,
-      //   rounded: true,
-      //   trailLength,
-      //   // currentTime: this.state.time,
-      //   shadowEnabled: false
-      // }),
-      new PathLayer({
-        id: "timeline-layer",
+      new TripsLayer({
+        id: "trips",
         data: trips,
-        opacity: 0.5,
-        pickable: false,
-        widthScale: 2,
-        widthMinPixels: 2,
         getPath: d => d.path,
-        getColor: [61, 90, 254]
+        getTimestamps: d => d.timestamps,
+        // getColor: d => [48, 102, 61],
+        getColor: d => [33, 33, 33],
+        opacity: 0.8,
+        widthMinPixels: 5,
+        rounded: true,
+        trailLength,
+        currentTime: this.state.time,
+        shadowEnabled: false
       })
+      // new PathLayer({
+      //   id: "timeline-layer",
+      //   data: trips,
+      //   opacity: 0.5,
+      //   pickable: false,
+      //   widthScale: 2,
+      //   widthMinPixels: 2,
+      //   getPath: d => d.path,
+      //   getColor: [61, 90, 254]
+      // })
     ];
   }
 
   render() {
     const {
       hoveredItem,
-      viewState,
-      // https://docs.mapbox.com/api/maps/#styles
-      mapStyle = "mapbox://styles/mapbox/light-v10",
-      theme = DEFAULT_THEME
+      mapStyle = "mapbox://styles/mapbox/light-v10" // https://docs.mapbox.com/api/maps/#styles
     } = this.state;
     const timelineData = [
       {
@@ -223,9 +222,7 @@ class App extends React.Component {
         />
         <DeckGL
           layers={this._renderLayers()}
-          // effects={theme.effects}
           initialViewState={INITIAL_VIEW_STATE}
-          // viewState={viewState}
           controller={true}
         >
           {/* <LayerInfo hovered={hoveredItem} /> */}
