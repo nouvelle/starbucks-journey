@@ -6,7 +6,7 @@ import MapGL from "react-map-gl";
 import LayerInfo from "./LayerInfo";
 import DeckGLOverlay from "@deck.gl/react";
 // Source data CSV
-import sbux_stores from "./data/sbux-store-locations.json";
+import sbux_stores from "./data/seattle-locations";
 import trips from "./data/trips-data.json";
 import logo from "./images/star.png";
 
@@ -93,7 +93,7 @@ class App extends React.Component {
 
   _animate() {
     const {
-      loopLength = 1800, // unit corresponds to the timestamp in source data
+      loopLength = 1000, // unit corresponds to the timestamp in source data
       animationSpeed = 30 // unit time per second
     } = this.props;
     const timestamp = Date.now() / 1000;
@@ -128,6 +128,23 @@ class App extends React.Component {
     });
   };
 
+  _updateTooltipStop = ({ x, y, object }) => {
+    // console.log(x, y);
+    const tooltip = document.getElementById("tooltip");
+    // console.log("object : ", object);
+    if (object) {
+      tooltip.style.visibility = "visible";
+      tooltip.style.top = y + "px";
+      tooltip.style.left = x + "px";
+      tooltip.style.zIndex = 2;
+      tooltip.innerHTML =
+        "<p>" + object.Latitude + "<br>" + object.Longitude + "</p>";
+    } else {
+      tooltip.style.visibility = "hidden";
+      tooltip.style.zIndex = 0;
+      tooltip.innerHTML = "";
+    }
+  };
   _renderLayers() {
     const {
       stores = sbux_stores,
@@ -153,11 +170,12 @@ class App extends React.Component {
         getPosition: d => [d.Longitude, d.Latitude],
         getSize: d => 2,
         // sizeScale: 10,
-        getColor: d => [48, 102, 61],
-        onHover: info =>
-          this.setState({
-            hoveredItem: info
-          })
+        getColor: d => [48, 102, 61]
+        // onHover: this._updateTooltipStop
+        // onHover: info =>
+        //   this.setState({
+        //     hoveredItem: info
+        //   })
         // {
         //   const tooltip = `${d.Brand}\n${d.StoreName}\n${d.StreetAddress}`;
         //   /* Update tooltip
@@ -177,7 +195,8 @@ class App extends React.Component {
         rounded: true,
         trailLength,
         currentTime: this.state.time,
-        shadowEnabled: false
+        shadowEnabled: false,
+        onHover: this._updateTooltipStop
       })
       // new PathLayer({
       //   id: "timeline-layer",
