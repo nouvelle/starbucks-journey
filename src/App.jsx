@@ -1,9 +1,8 @@
 import React from "react";
 import DeckGL from "@deck.gl/react";
-import { IconLayer, PathLayer } from "@deck.gl/layers";
+import { IconLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import MapGL from "react-map-gl";
-import LayerInfo from "./LayerInfo";
 import DeckGLOverlay from "@deck.gl/react";
 // Source data CSV
 import sbux_stores from "./data/seattle-locations";
@@ -36,12 +35,11 @@ class App extends React.Component {
         height: window.innerHeight,
         latitude: 47.60521,
         longitude: -122.33207,
-        zoom: 11,
+        zoom: 12,
         pitch: 0,
         maxZoom: 17
       },
       time: 0,
-      hoveredItem: {},
       timelinePoints: [],
       timelineTimestamps: [],
       status: "LOADING",
@@ -129,17 +127,17 @@ class App extends React.Component {
   };
 
   _updateTooltipStop = ({ x, y, object }) => {
-    // console.log(x, y);
     const tooltip = document.getElementById("tooltip");
     // console.log("object : ", object);
-    if (object) {
+    if (object && object.name) {
+      console.log(object.name);
       tooltip.style.visibility = "visible";
       tooltip.style.top = y + "px";
       tooltip.style.left = x + "px";
       tooltip.style.zIndex = 2;
-      tooltip.innerHTML =
-        "<p>" + object.Latitude + "<br>" + object.Longitude + "</p>";
+      tooltip.innerHTML = "<p>" + object.name + "</p>";
     } else {
+      console.log("click");
       tooltip.style.visibility = "hidden";
       tooltip.style.zIndex = 0;
       tooltip.innerHTML = "";
@@ -169,51 +167,28 @@ class App extends React.Component {
         sizeScale: 15,
         getPosition: d => [d.Longitude, d.Latitude],
         getSize: d => 2,
-        // sizeScale: 10,
-        getColor: d => [48, 102, 61]
-        // onHover: this._updateTooltipStop
-        // onHover: info =>
-        //   this.setState({
-        //     hoveredItem: info
-        //   })
-        // {
-        //   const tooltip = `${d.Brand}\n${d.StoreName}\n${d.StreetAddress}`;
-        //   /* Update tooltip
-        //      http://deck.gl/#/documentation/developer-guide/adding-interactivity?section=example-display-a-tooltip-for-hovered-object
-        //   */
-        // }
+        getColor: d => [48, 102, 61],
+        // onHover: this._updateTooltipStop,
+        onClick: this._updateTooltipStop
       }),
       new TripsLayer({
         id: "trips",
         data: trips,
         getPath: d => d.path,
         getTimestamps: d => d.timestamps,
-        // getColor: d => [48, 102, 61],
-        getColor: d => [33, 33, 33],
+        getColor: d => [84, 169, 99],
         opacity: 0.8,
         widthMinPixels: 5,
         rounded: true,
         trailLength,
         currentTime: this.state.time,
-        shadowEnabled: false,
-        onHover: this._updateTooltipStop
+        shadowEnabled: false
       })
-      // new PathLayer({
-      //   id: "timeline-layer",
-      //   data: trips,
-      //   opacity: 0.5,
-      //   pickable: false,
-      //   widthScale: 2,
-      //   widthMinPixels: 2,
-      //   getPath: d => d.path,
-      //   getColor: [61, 90, 254]
-      // })
     ];
   }
 
   render() {
     const {
-      hoveredItem,
       mapStyle = "mapbox://styles/mapbox/light-v10" // https://docs.mapbox.com/api/maps/#styles
     } = this.state;
     const timelineData = [
@@ -235,17 +210,13 @@ class App extends React.Component {
         <DeckGLOverlay
           viewport={this.state.viewport}
           timelineData={timelineData}
-          // pointData={pointData}
-          // settings={this.state.settings}
           onPointClick={this._onPointClick}
         />
         <DeckGL
           layers={this._renderLayers()}
           initialViewState={INITIAL_VIEW_STATE}
           controller={true}
-        >
-          {/* <LayerInfo hovered={hoveredItem} /> */}
-        </DeckGL>
+        ></DeckGL>
       </MapGL>
     );
   }
