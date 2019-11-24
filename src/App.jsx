@@ -143,6 +143,22 @@ class App extends React.Component {
       tooltip.innerHTML = "";
     }
   };
+  // _updateTimeLine = ({ x, y, object }) => {
+  //   const timeline = document.getElementById("timeline");
+  //   if (object && object.name) {
+  //     console.log(object.name);
+  //     tooltip.style.visibility = "visible";
+  //     tooltip.style.top = y + "px";
+  //     tooltip.style.left = x + "px";
+  //     tooltip.style.zIndex = 2;
+  //     tooltip.innerHTML = "<p>" + object.name + "</p>";
+  //   } else {
+  //     console.log("click");
+  //     tooltip.style.visibility = "hidden";
+  //     tooltip.style.zIndex = 0;
+  //     tooltip.innerHTML = "";
+  //   }
+  // };
   _renderLayers() {
     const {
       stores = sbux_stores,
