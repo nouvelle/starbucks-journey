@@ -7,7 +7,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "heroku-postbuild": "yarn build"
+    "heroku-postbuild": "yarn build",
+    "postinstall": "yarn build"
   },
   "dependencies": {
     "deck.gl": "^7.3.6",
