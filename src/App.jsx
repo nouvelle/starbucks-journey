@@ -70,12 +70,16 @@ class App extends React.Component {
         return accu;
       }, []);
       const timelineTimestamps = trips.locations.reduce((accu, curr) => {
-        const startTime = new Date("2019/2/16");
-        const startTimestamp = startTime.getTime();
+        // const startTime = new Date("2019/2/16");
+        // const startTimestamp = startTime.getTime();
+        const startTimestamp = 1550263084584;
         const elapsed = Number(curr.timestampMs) - startTimestamp;
         // ミリ秒を分に変換(端数切捨て)
         var min = Math.floor(elapsed / (1000 * 60));
-        // console.log("elapsed", elapsed);
+        // console.log(
+        //   "date :",
+        //   new Date(Number(curr.timestampMs)).toLocaleString("en-US")
+        // );
         // console.log("min", min);
 
         accu.push(min);
@@ -86,6 +90,7 @@ class App extends React.Component {
         timelineTimestamps,
         status: "READY"
       });
+      console.log("timelineTimestamps", timelineTimestamps);
     }
   };
 
@@ -100,7 +105,13 @@ class App extends React.Component {
     this.setState({
       time: ((timestamp % loopTime) / loopTime) * loopLength // 1 ~ 1800
     });
+    const timelineDom = document.getElementById("timeline");
+    // 2019/02/16 13:38:04 ~ 2019/02/17 22:17:12
+    let date = new Date(
+      1550291884000 + Math.round(this.state.time * 60000)
+    ).toLocaleString("en-US");
     // console.log(this.state.time);
+    timelineDom.innerText = date;
     // requestAnimationFrame: ブラウザの描画タイミング毎に実行
     this._animationFrame = window.requestAnimationFrame(
       this._animate.bind(this)
@@ -128,7 +139,6 @@ class App extends React.Component {
 
   _updateTooltipStop = ({ x, y, object }) => {
     const tooltip = document.getElementById("tooltip");
-    // console.log("object : ", object);
     if (object && object.name) {
       console.log(object.name);
       tooltip.style.visibility = "visible";
@@ -143,22 +153,6 @@ class App extends React.Component {
       tooltip.innerHTML = "";
     }
   };
-  // _updateTimeLine = ({ x, y, object }) => {
-  //   const timeline = document.getElementById("timeline");
-  //   if (object && object.name) {
-  //     console.log(object.name);
-  //     tooltip.style.visibility = "visible";
-  //     tooltip.style.top = y + "px";
-  //     tooltip.style.left = x + "px";
-  //     tooltip.style.zIndex = 2;
-  //     tooltip.innerHTML = "<p>" + object.name + "</p>";
-  //   } else {
-  //     console.log("click");
-  //     tooltip.style.visibility = "hidden";
-  //     tooltip.style.zIndex = 0;
-  //     tooltip.innerHTML = "";
-  //   }
-  // };
   _renderLayers() {
     const {
       stores = sbux_stores,
@@ -191,7 +185,11 @@ class App extends React.Component {
         id: "trips",
         data: trips,
         getPath: d => d.path,
-        getTimestamps: d => d.timestamps,
+        getTimestamps: d => {
+          const timelineDom = document.getElementById("timeline");
+          timelineDom.innerText = d.timestamps;
+          return d.timestamps;
+        },
         getColor: d => [84, 169, 99],
         opacity: 0.8,
         widthMinPixels: 5,
