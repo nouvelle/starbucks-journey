@@ -72,10 +72,11 @@ This software uses the following open source packages:
 - [Deck.gl](https://deck.gl/)
 - [Mapbox](https://www.mapbox.com/)
 
-* About Mapbox Tokens
-  To load the map styles and tiles from Mapbox's data service, you will need to register on their website in order to retrieve an [access token](https://docs.mapbox.com/help/how-mapbox-works/access-tokens/) required by the map component, which will be used to identify you and start serving up map tiles. The service will be free until a certain level of traffic is exceeded.
+### About Mapbox Tokens
 
-  Please set environment variable _REACT_APP_MAPBOX_TOKEN_
+To load the map styles and tiles from Mapbox's data service, you will need to register on their website in order to retrieve an [access token](https://docs.mapbox.com/help/how-mapbox-works/access-tokens/) required by the map component, which will be used to identify you and start serving up map tiles. The service will be free until a certain level of traffic is exceeded.
+
+Please set environment variable _REACT_APP_MAPBOX_TOKEN_
 
 # Contributing
 
